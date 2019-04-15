@@ -18,6 +18,7 @@ import cormodule
 from std_msgs.msg import UInt8
 import P1_pt1 as p1
 import le_scan as ls
+import visao_module
 
 
 bridge = CvBridge()
@@ -26,6 +27,7 @@ cv_image = None
 media = []
 centro = []
 atraso = 0.5E9 # meio segundo. Em nanossegundos
+resultados_mnet = []
 
 area = 0.0 # Variavel com a area do maior contorno
 a = 100000
@@ -40,6 +42,7 @@ def roda_todo_frame(imagem):
 	global media
 	global centro
 	global area
+	global resultados_mnet
 
 	now = rospy.get_rostime()
 	imgtime = imagem.header.stamp
@@ -52,8 +55,9 @@ def roda_todo_frame(imagem):
 		antes = time.clock()
 		cv_image = bridge.compressed_imgmsg_to_cv2(imagem, "bgr8")
 		media, centro, area =  cormodule.identifica_cor(cv_image)
+		centro_mnet, imagem_mnet, resultados_mnet =  visao_module.processa(cv_image)
 		depois = time.clock()
-		cv2.imshow("Camera", cv_image)
+		cv2.imshow("Camera", imagem_mnet)
 	except CvBridgeError as e:
 		print('ex', e)
 	
@@ -89,6 +93,8 @@ if __name__=="__main__":
 			elif ls.dist < ls.maximo and ls.dist > ls.minimo and ls.dist < 0.15:
 				ls.dodge(velocidade_saida)
 				p1.forward(velocidade_saida)
+			elif len(resultados_mnet) != 0:
+				vel = Twist(Vector3(-0.3,0,0), Vector3(0,0,0))
 			else:
 				if area > 2000:
 					if area > a:
