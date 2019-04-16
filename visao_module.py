@@ -16,7 +16,6 @@ import mobilenet_simples as mnet
 
 def processa(frame):
     '''Use esta funcao para basear o processamento do seu robo'''
-
     result_frame, result_tuples = mnet.detect(frame)
 
     centro = (frame.shape[1]//2, frame.shape[0]//2)
@@ -31,6 +30,8 @@ def processa(frame):
     cv2.waitKey(1)
 
     return centro, result_frame, result_tuples
+
+
 
 
 

@@ -28,7 +28,7 @@ media = []
 centro = []
 atraso = 0.5E9 # meio segundo. Em nanossegundos
 resultados_mnet = []
-
+need_dodge = False
 area = 0.0 # Variavel com a area do maior contorno
 a = 100000
 
@@ -87,11 +87,17 @@ if __name__=="__main__":
 	try:
 		while not rospy.is_shutdown():
 			vel = Twist(Vector3(0,0,0), Vector3(0,0,0))
+			for i in range(len(ls.dists)):
+				need_dodge = False
+				if ls.dists[i] < ls.maximo and ls.dists[i] > ls.minimo and ls.dists[i] < 0.15:
+					need_dodge = True
+					angulo = i
+					break
 			if p1.bump_happened:
 				p1.react(velocidade_saida)
 				p1.bump_happened = False
-			elif ls.dist < ls.maximo and ls.dist > ls.minimo and ls.dist < 0.15:
-				ls.dodge(velocidade_saida)
+			elif need_dodge:
+				ls.dodge(velocidade_saida, angulo)
 				p1.forward(velocidade_saida)
 			elif len(resultados_mnet) != 0:
 				vel = Twist(Vector3(-0.3,0,0), Vector3(0,0,0))
