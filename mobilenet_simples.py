@@ -13,6 +13,7 @@ import rospkg
 import os
 import Projeto1 as P1
 
+contador_mnet = 1000
 
 rospack = rospkg.RosPack()
 path = rospack.get_path('p1_ros')
@@ -21,17 +22,8 @@ scripts = os.path.join(path,  "scripts")
 proto = os.path.join(scripts,"MobileNetSSD_deploy.prototxt.txt")
 model = os.path.join(scripts, "MobileNetSSD_deploy.caffemodel")
 confianca = 0.2
-'''
-# construct the argument parse and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-p", "--prototxt", required=True,
-    help="path to Caffe 'deploy' prototxt file")
-ap.add_argument("-m", "--model", required=True,
-    help="path to Caffe pre-trained model")
-ap.add_argument("-c", "--confidence", type=float, default=0.2,
-    help="minimum probability to filter weak detections")
-args = vars(ap.parse_args())
-'''
+
+initBB = None
 
 # initialize the list of class labels MobileNet SSD was trained to
 # detect, then generate a set of bounding box colors for each class
@@ -102,7 +94,83 @@ def detect(frame):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
 
                 results.append((CLASSES[idx], confidence*100, (startX, startY),(endX, endY) ))
-
+        if results == []:
+            P1.contador = 0
     # show the output image
     return image, results
+
+def track(frame):
+    global initBB
+    global contador_mnet
+    P1.contador = 10
+    tracker_type = "kcf"
+    # extract the OpenCV version info
+    (major, minor) = cv2.__version__.split(".")[:2]
+
+    # if we are using OpenCV 3.2 OR BEFORE, we can use a special factory
+    # function to create our object tracker
+    if int(major) == 3 and int(minor) < 3:
+        tracker = cv2.Tracker_create(tracker_type.upper())
+
+    # otherwise, for OpenCV 3.3 OR NEWER, we need to explicity call the
+    # approrpiate object tracker constructor:
+    else:
+        # initialize a dictionary that maps strings to their corresponding
+        # OpenCV object tracker implementations
+        OPENCV_OBJECT_TRACKERS = {
+            "csrt": cv2.TrackerCSRT_create,
+            "kcf": cv2.TrackerKCF_create,
+            "boosting": cv2.TrackerBoosting_create,
+            "mil": cv2.TrackerMIL_create,
+            "tld": cv2.TrackerTLD_create,
+            "medianflow": cv2.TrackerMedianFlow_create,
+            "mosse": cv2.TrackerMOSSE_create
+        }
+
+        # grab the appropriate object tracker using our dictionary of
+        # OpenCV object tracker objects
+        tracker = OPENCV_OBJECT_TRACKERS[tracker_type]()
+
+    if P1.contador == 10:
+
+        result_frame, result_tuples = detect(frame)
+        # select initial bounding box
+        if result_tuples != []:
+            initBB = (result_tuples[0][2][0], result_tuples[0][2][1],
+                    result_tuples[0][3][0] - result_tuples[0][2][0], 
+                    result_tuples[0][3][1] - result_tuples[0][2][1])
+
+        # start OpenCV object tracker using the supplied bounding box
+            tracker.init(frame, initBB)
+
+            P1.contador = 20
+
+    # check to see if we are currently tracking an object
+    if P1.contador == 20:
+        # grab the new bounding box coordinates of the object
+        (success, box) = tracker.update(frame)
+
+        # check to see if the tracking was a success
+        if success:
+
+            (x, y, w, h) = [int(v) for v in box]
+            cv2.rectangle(frame, (x, y), (x + w, y + h),
+                (0, 255, 0), 2)
+        else:
+            P1.contador = 0
+
+        # initialize the set of information we'll be displaying on
+        # the frame
+        info = [
+            ("Tracker", tracker_type),
+            ("Success", "Yes" if success else "No"),
+        ]
+    contador_mnet = P1.contador
+
+
+
+
+    
+
+
 

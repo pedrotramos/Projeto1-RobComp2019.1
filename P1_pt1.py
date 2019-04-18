@@ -110,8 +110,6 @@ def react(velocidade_saida):
   if bump == 3:
     bump_happened = False
     forward(velocidade_saida)
-    rotate_right(velocidade_saida)
   if bump == 4:
     bump_happened = False
     forward(velocidade_saida)
-    rotate_left(velocidade_saida)
